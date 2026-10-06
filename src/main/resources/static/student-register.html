@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Create Student Account | KARPAVAI.AI</title><link rel="stylesheet" href="/css/style.css"></head>
+<body>
+<div class="auth">
+  <div class="authbox authbox-modern">
+    <a class="brand" href="/">⚡ KARPAVAI.AI</a>
+    <div class="auth-kicker">FREE STUDENT ACCOUNT</div>
+    <h1>Start your journey 🚀</h1>
+    <p>Create your account to track progress, take AI mock tests and build your placement readiness.</p>
+    <form id="registerForm" novalidate>
+      <label>Full name</label>
+      <input id="regName" type="text" placeholder="Prasanna Venkatesh" autocomplete="name" required>
+      <label>Email address</label>
+      <input id="regEmail" type="email" placeholder="you@example.com" autocomplete="email" required>
+      <label>Password <small>(minimum 6 characters)</small></label>
+      <input id="regPassword" type="password" placeholder="Create a password" autocomplete="new-password" minlength="6" required>
+      <button class="btn" type="submit">Create Student Account →</button>
+    </form>
+    <div id="registerMsg" class="auth-msg"></div>
+    <div class="auth-divider"><span>ALREADY A STUDENT?</span></div>
+    <a class="btn ghost full" href="/student-login.html">Go to Student Login</a>
+    <p class="auth-note"><a href="/">← Back to KARPAVAI.AI</a></p>
+  </div>
+</div>
+<script src="/js/api.js"></script>
+<script>
+const nameEl=document.querySelector('#regName');
+const emailEl=document.querySelector('#regEmail');
+const passEl=document.querySelector('#regPassword');
+const msgEl=document.querySelector('#registerMsg');
+document.querySelector('#registerForm').addEventListener('submit',async e=>{
+ e.preventDefault();
+ const name=nameEl.value.trim(), email=emailEl.value.trim().toLowerCase(), password=passEl.value;
+ msgEl.className='auth-msg';
+ if(!name||!email||!password){msgEl.className='auth-msg error';msgEl.textContent='Please fill in all fields.';return}
+ if(password.length<6){msgEl.className='auth-msg error';msgEl.textContent='Password must contain at least 6 characters.';return}
+ msgEl.textContent='Creating your account...';
+ try{
+   const r=await api('/api/auth/register','POST',{name,email,password});
+   if(r.message==='Registration successful'){
+     msgEl.className='auth-msg success'; msgEl.textContent='✓ Account created! Redirecting to login...';
+     setTimeout(()=>location='/student-login.html?registered=1',900);
+   }else{
+     msgEl.className='auth-msg error'; msgEl.textContent=r.message||'Registration failed.';
+   }
+ }catch(err){msgEl.className='auth-msg error';msgEl.textContent='Unable to reach the server. Make sure Spring Boot is running.'}
+});
+</script></body></html>

@@ -1,0 +1,1 @@
+Business logic is kept simple; readiness calculations are implemented in StudentController for this starter build.

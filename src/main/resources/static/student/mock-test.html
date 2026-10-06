@@ -1,0 +1,92 @@
+<!doctype html>
+<html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>AI Mock Interview | KARPAVAI.AI</title><link rel="stylesheet" href="/css/style.css"></head>
+<body>
+<div class="layout">
+<aside>
+<div class="brand">⚡ KARPAVAI.AI</div>
+<a href="/student/dashboard.html">Dashboard</a>
+<a href="/companies.html">Companies</a>
+<a href="/student/questions.html">Questions</a>
+<a class="active">AI Mock Test</a>
+<a href="/student/interview-experiences.html">Experiences</a>
+<a href="/student/progress.html">Readiness</a>
+<a href="/student/revision.html">My Revision</a>
+<a href="/student-login.html" onclick="fetch('/api/auth/logout',{method:'POST'})">Logout</a>
+</aside>
+<main class="dash">
+<section class="mock-hero">
+<span class="pill">SIGNATURE FEATURE</span>
+<h1>AI Mock Test Lab</h1>
+<p>Take a timed placement-style test. KARPAVAI.AI analyzes your answers locally using an explainable scoring engine and tells you exactly which areas deserve more attention.</p>
+<div class="mock-meta"><span>10 Questions</span><span>20 Minutes</span><span>Instant Analysis</span><span>No external AI API</span></div>
+</section>
+
+<div id="intro" class="panel">
+<h2>Ready for your mock?</h2>
+<p>Answer each question as if you were sitting in a real technical interview. Explain your approach, reasoning, complexity, examples, and trade-offs where relevant.</p>
+<button class="btn" onclick="startTest()">Start Mock Test →</button>
+</div>
+
+<div id="test" style="display:none">
+<div class="panel">
+<div class="mock-actions"><div><b id="progress">Question 1 of 10</b><p id="meta" style="color:#667085;margin:5px 0"></p></div><div class="timer" id="timer">20:00</div></div>
+</div>
+<div id="questions" class="list" style="margin-top:18px"></div>
+<div class="mock-actions"><span id="saveStatus" style="color:#667085"></span><button class="btn" onclick="submitTest()">Submit & Analyze ✨</button></div>
+</div>
+
+<div id="result" style="display:none"></div>
+</main></div>
+<script src="/js/api.js"></script>
+<script>
+let testQuestions=[], remaining=1200, timerId=null;
+
+async function startTest(){
+  intro.style.display='none'; test.style.display='block';
+  testQuestions=await api('/api/student/mock-test');
+  if(!Array.isArray(testQuestions)||!testQuestions.length){questions.innerHTML='<div class="empty">No questions are available yet. Ask the admin to add questions.</div>';return;}
+  render();
+  timerId=setInterval(()=>{remaining--; updateTimer(); if(remaining<=0){clearInterval(timerId); submitTest();}},1000);
+}
+function updateTimer(){let m=Math.floor(remaining/60),s=remaining%60;timer.textContent=String(m).padStart(2,'0')+':'+String(s).padStart(2,'0');if(remaining<=120)timer.style.color='#d92d20';}
+function render(){
+  questions.innerHTML=testQuestions.map((q,i)=>`
+  <div class="panel mock-q">
+    <div class="qnum">QUESTION ${i+1}</div>
+    <h2>${escapeHtml(q.questionText)}</h2>
+    <p><span class="badge">${escapeHtml(q.category)}</span><span class="badge">${escapeHtml(q.topic||'General')}</span><span class="badge">${escapeHtml(q.difficulty||'Medium')}</span> ${escapeHtml(q.company||'')}</p>
+    <textarea id="ans-${q.id}" placeholder="Write your answer here... Explain your approach clearly."></textarea>
+  </div>`).join('');
+  progress.textContent='Question '+testQuestions.length+' of '+testQuestions.length;
+  meta.textContent='Covering DSA, Java, SQL, CS fundamentals and interview topics';
+}
+async function submitTest(){
+  if(!testQuestions.length)return;
+  clearInterval(timerId);
+  saveStatus.textContent='Analyzing your answers...';
+  const answers=testQuestions.map(q=>({questionId:q.id,answer:document.getElementById('ans-'+q.id)?.value||''}));
+  const r=await api('/api/student/mock-test/submit','POST',{answers});
+  test.style.display='none'; result.style.display='block';
+  const focus=(r.focusAreas||[]).map(x=>`<span class="focus-chip">${escapeHtml(x)}</span>`).join('');
+  const cats=Object.entries(r.categoryScores||{}).map(([k,v])=>`<div class="analysis-card"><b>${escapeHtml(k)}</b><div class="bar"><i style="width:${Math.min(100,v*10)}%"></i></div><small>${v}/10 weighted points</small></div>`).join('');
+  result.innerHTML=`
+    <div class="panel">
+      <span class="pill">${r.aiAnalysisAvailable ? "SPRING AI ANALYSIS COMPLETE" : "LOCAL ANALYSIS COMPLETE"}</span>
+      <h1>Your Mock Test Report</h1>
+      <div class="result-score">${r.percentage}%</div>
+      <h2>${escapeHtml(r.level||'Result')}</h2>
+      <div class="ai-box"><h3>✨ Personalized feedback</h3><p>${escapeHtml(r.feedback||'Keep practicing and retake the test.')}</p></div>
+      <div class="analysis-grid" style="margin-top:18px">
+        <div class="analysis-card"><b>Where to concentrate more</b><p>${focus}</p></div>
+        <div class="analysis-card"><b>Test score</b><p>${r.score} / ${r.total}</p><p>Use this as your baseline and retake after targeted practice.</p></div>
+      </div>
+      <h2>AI Answer Feedback</h2>
+      <div class="analysis-grid">${(r.aiFeedback||[]).map((x,i)=>`<div class="analysis-card"><b>Question ${i+1} • ${x.score}/10</b><p>${escapeHtml(x.feedback||'')}</p><p><b>Strengths:</b> ${escapeHtml((x.strengths||[]).join(', '))}</p><p><b>Improve:</b> ${escapeHtml((x.weaknesses||[]).join(', '))}</p><p><b>Missing:</b> ${escapeHtml((x.missingConcepts||[]).join(', '))}</p></div>`).join('') || '<div class="analysis-card"><p>AI feedback is unavailable. The existing local analysis was used.</p></div>'}</div>
+      <h2>Topic performance</h2>
+      <div class="analysis-grid">${cats}</div>
+      <div class="actions"><a class="btn" href="/student/questions.html">Practice Focus Areas →</a><button class="btn ghost" onclick="location.reload()">Take Another Mock</button></div>
+    </div>`;
+}
+function escapeHtml(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+</script></body></html>

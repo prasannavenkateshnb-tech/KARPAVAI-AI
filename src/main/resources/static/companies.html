@@ -1,0 +1,8 @@
+<!doctype html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Companies | KARPAVAI.AI</title><link rel="stylesheet" href="/css/style.css"></head>
+<body><nav class="nav"><div class="brand">⚡ KARPAVAI.AI</div><div><a href="/">Home</a><a href="/student/dashboard.html">Dashboard</a></div></nav>
+<main class="section"><div class="heading"><div><span class="pill">COMPANY EXPLORER</span><h1>Choose your target company</h1><p style="color:#667085">Explore company-specific preparation paths, questions and interview experiences.</p></div><input id="search" placeholder="Search companies..."></div>
+<div id="companies" class="grid"></div></main>
+<script src="/js/api.js"></script><script>
+function slug(s){return s.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'')}
+async function load(){let q=search.value;let cs=await api('/api/companies'+(q?'?search='+encodeURIComponent(q):''));companies.innerHTML=(cs||[]).map(c=>`<div class="card company"><div class="logo"><img src="/logos/${slug(c.name)}.svg" alt="${c.name} logo"></div><div style="margin-top:16px"><span class="badge">${c.industry||'Technology'}</span><span class="badge">${c.difficulty||'Medium'}</span></div><h3>${c.name}</h3><p>${c.description||''}</p><a class="btn small" href="/student/company-details.html?id=${c.id}">View preparation →</a></div>`).join('')}search.oninput=load;load()
+</script></body></html>

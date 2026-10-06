@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Student Login | KARPAVAI.AI</title><link rel="stylesheet" href="/css/style.css"></head>
+<body>
+<div class="auth">
+  <div class="authbox authbox-modern">
+    <a class="brand" href="/">⚡ KARPAVAI.AI</a>
+    <div class="auth-kicker">STUDENT PORTAL</div>
+    <h1>Welcome back 👋</h1>
+    <p>Continue your placement preparation, practice mocks and improve your readiness.</p>
+    <form id="loginForm">
+      <label>Email address</label>
+      <input id="loginEmail" type="email" placeholder="you@example.com" autocomplete="email" required>
+      <label>Password</label>
+      <input id="loginPassword" type="password" placeholder="Enter your password" autocomplete="current-password" required>
+      <label class="remember"><input id="remember" type="checkbox"> <span>Remember my email</span></label>
+      <button class="btn" type="submit">Login to KARPAVAI.AI →</button>
+    </form>
+    <div id="loginMsg" class="auth-msg"></div>
+    <div class="auth-divider"><span>NEW HERE?</span></div>
+    <a class="btn ghost full" href="/student-register.html">Create a Student Account</a>
+    <p class="auth-note"><a href="/">← Back to KARPAVAI.AI</a></p>
+  </div>
+</div>
+<script src="/js/api.js"></script>
+<script>
+const emailEl=document.querySelector('#loginEmail');
+const passEl=document.querySelector('#loginPassword');
+const rememberEl=document.querySelector('#remember');
+const msgEl=document.querySelector('#loginMsg');
+const saved=localStorage.getItem('prepforge_student_email');
+if(saved){emailEl.value=saved;rememberEl.checked=true}
+document.querySelector('#loginForm').addEventListener('submit',async e=>{
+ e.preventDefault(); msgEl.className='auth-msg'; msgEl.textContent='Signing you in...';
+ const email=emailEl.value.trim().toLowerCase(), password=passEl.value;
+ const r=await api('/api/auth/login','POST',{email,password});
+ if(r.redirect){
+   if(rememberEl.checked)localStorage.setItem('prepforge_student_email',email); else localStorage.removeItem('prepforge_student_email');
+   location=r.redirect;
+ }else{
+   msgEl.className='auth-msg error'; msgEl.textContent=r.message||'Login failed. Please check your email and password.';
+ }
+});
+</script></body></html>

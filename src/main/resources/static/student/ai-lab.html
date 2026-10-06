@@ -1,0 +1,194 @@
+<!doctype html>
+<html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>AI Preparation Lab | KARPAVAI.AI</title><link rel="stylesheet" href="/css/style.css"></head>
+<body><div class="layout">
+<aside><div class="brand">⚡ KARPAVAI.AI</div>
+<a href="/student/dashboard.html">Dashboard</a><a href="/companies.html">Companies</a>
+<a href="/student/questions.html">Questions</a><a class="active">AI Preparation Lab</a>
+<a href="/student/mock-test.html">AI Mock Test</a><a href="/student/progress.html">Readiness</a>
+</aside>
+<main class="dash"><span class="pill">SPRING AI + OLLAMA</span><h1>AI Preparation Lab</h1>
+<p style="color:#667085">AI-generated practice and personalized preparation. Generated content is for practice and is not claimed to be actual company interview material.</p>
+
+<section class="panel"><h2>Generate Interview Questions</h2>
+<div class="formgrid">
+<input id="company" placeholder="Company" value="Amazon"><input id="role" placeholder="Role" value="Software Developer">
+<input id="skill" placeholder="Skill" value="Java, Spring Boot, MySQL"><input id="difficulty" placeholder="Difficulty" value="Medium">
+<input id="count" type="number" min="1" max="15" value="5">
+<button class="btn" onclick="generateQuestions()">Generate AI Questions</button></div>
+<div id="questions" class="list" style="margin-top:16px"></div></section>
+
+<section class="panel"><h2>Personalized Study Plan</h2>
+<div class="formgrid"><input id="days" type="number" min="1" max="30" value="7" placeholder="Days">
+<input id="weak" placeholder="Weak areas" value="SQL, DSA">
+<input id="performance" placeholder="Performance summary" value="Good Java basics, needs more DSA and SQL practice">
+<button class="btn" onclick="studyPlan()">Create Study Plan</button></div>
+<div id="plan" class="list" style="margin-top:16px"></div></section>
+
+<section class="panel"><h2>AI Company Preparation</h2>
+<div class="formgrid"><input id="cpCompany" placeholder="Company" value="Amazon"><input id="cpRole" placeholder="Role" value="Software Developer">
+<input id="cpLevel" placeholder="Skill level" value="Intermediate"><input id="cpPerf" placeholder="Previous performance" value="DSA 60%, Java 75%, SQL 50%">
+<button class="btn" onclick="companyPrep()">Create Company Prep</button></div>
+<div id="companyPrepResult" class="list" style="margin-top:16px"></div></section>
+
+<section class="panel"><h2>AI Answer Evaluation</h2>
+<div class="formgrid"><input id="evalQuestion" placeholder="Question" value="What is encapsulation in Java?">
+<input id="evalExpected" placeholder="Reference answer (optional)" value="Encapsulation wraps data and methods together and controls access to data.">
+<textarea id="evalAnswer" placeholder="Your answer..." style="min-height:110px">Encapsulation means wrapping data and methods together inside a class and protecting data using access modifiers.</textarea>
+<button class="btn" id="evaluateAnswerButton">Evaluate with AI</button></div>
+<div id="evaluation" class="list" style="margin-top:16px"></div></section>
+
+<section class="panel"><h2>AI Performance Analysis</h2>
+<button class="btn" onclick="performanceAnalysis()">Analyze My Preparation</button>
+<div id="analysis" class="list" style="margin-top:16px"></div></section>
+
+<section class="panel"><h2>AI Mock Interview</h2>
+<div class="formgrid"><input id="miCompany" placeholder="Company" value="Amazon"><input id="miRole" placeholder="Role" value="Software Developer">
+<input id="miDifficulty" placeholder="Difficulty" value="Medium"><input id="miType" placeholder="Interview type" value="Technical">
+</div>
+<button class="btn" onclick="nextQuestion()" style="margin-top:12px">Start / Next Question</button>
+<div id="interview" style="margin-top:16px"></div></section>
+</main></div>
+<script src="/js/api.js"></script>
+<script>
+const $ = id => document.getElementById(id);
+
+function setBusy(button, busy, text) {
+  if (!button) return;
+  button.disabled = busy;
+  button.dataset.originalText ??= button.textContent;
+  button.textContent = busy ? text : button.dataset.originalText;
+}
+
+function showResult(id, html) {
+  const el = $(id);
+  if (el) el.innerHTML = html;
+}
+
+function showError(id, message) {
+  showResult(id, `<div class="empty">${escapeHtml(message || 'Something went wrong. Check the Spring Boot terminal.')}</div>`);
+}
+
+async function generateQuestions() {
+  const button = document.querySelector('button[onclick="generateQuestions()"]');
+  setBusy(button, true, 'Generating...');
+  showResult('questions', '<div class="empty">Connecting to Ollama...</div>');
+  try {
+    const r = await api('/api/ai/questions', 'POST', {
+      company: $('company').value, role: $('role').value, skill: $('skill').value,
+      difficulty: $('difficulty').value, count: Number($('count').value)
+    });
+    if (r.message) return showError('questions', r.message);
+    const items = Array.isArray(r.questions) ? r.questions : [];
+    if (!items.length) return showError('questions', 'Ollama returned no questions. Check the Spring Boot terminal for details.');
+    showResult('questions', items.map((q, i) => `<div class="card"><span class="badge">AI Generated</span><span class="badge">${escapeHtml(q.difficulty || 'Medium')}</span><h3>${i + 1}. ${escapeHtml(q.question || '')}</h3><p><b>Hint:</b> ${escapeHtml(q.answerHint || '')}</p></div>`).join(''));
+  } finally { setBusy(button, false); }
+}
+
+async function studyPlan() {
+  const button = document.querySelector('button[onclick="studyPlan()"]');
+  setBusy(button, true, 'Creating...');
+  showResult('plan', '<div class="empty">Creating your plan with Ollama...</div>');
+  try {
+    const r = await api('/api/ai/study-plan', 'POST', {
+      company: $('company').value, role: $('role').value, performance: $('performance').value,
+      weakAreas: $('weak').value, days: Number($('days').value)
+    });
+    if (r.message) return showError('plan', r.message);
+    const days = Array.isArray(r.days) ? r.days : [];
+    showResult('plan', days.map(d => `<div class="card"><h3>Day ${escapeHtml(d.day)}</h3>${(d.tasks || []).map(t => `<p><b>${escapeHtml(t.topic || '')}</b> • ${escapeHtml(t.priority || '')} • ${escapeHtml(t.duration || '')}<br>${escapeHtml(t.practice || '')}<br>${escapeHtml(t.revision || '')}</p>`).join('')}</div>`).join('') + `<div class="card"><b>Overall advice:</b> ${escapeHtml(r.overallAdvice || '')}</div>`);
+  } finally { setBusy(button, false); }
+}
+
+async function companyPrep() {
+  const button = document.querySelector('button[onclick="companyPrep()"]');
+  setBusy(button, true, 'Preparing...');
+  showResult('companyPrepResult', '<div class="empty">Generating company preparation with Ollama...</div>');
+  try {
+    const x = await api('/api/ai/company-preparation', 'POST', {
+      company: $('cpCompany').value, role: $('cpRole').value, skillLevel: $('cpLevel').value, performance: $('cpPerf').value
+    });
+    if (x.message) return showError('companyPrepResult', x.message);
+    showResult('companyPrepResult', `<div class="card"><h3>Important Topics</h3><p>${escapeHtml((x.importantTopics || []).join(', '))}</p></div><div class="card"><h3>Interview Areas</h3><p>${escapeHtml((x.interviewAreas || []).join(', '))}</p></div><div class="card"><h3>DSA Topics</h3><p>${escapeHtml((x.dsaTopics || []).join(', '))}</p></div><div class="card"><h3>Technical Topics</h3><p>${escapeHtml((x.technicalTopics || []).join(', '))}</p></div><div class="card"><h3>Recommendations</h3><p>${escapeHtml((x.recommendations || []).join(', '))}</p></div>`);
+  } finally { setBusy(button, false); }
+}
+
+async function performanceAnalysis() {
+  const button = document.querySelector('button[onclick="performanceAnalysis()"]');
+  setBusy(button, true, 'Analyzing...');
+  showResult('analysis', '<div class="empty">Analyzing your preparation with Ollama...</div>');
+  try {
+    const d = await api('/api/student/dashboard');
+    const r = await api('/api/student/readiness');
+    if (d.message || r.message) return showError('analysis', d.message || r.message);
+    const x = await api('/api/ai/performance', 'POST', {
+      performance: JSON.stringify(r), weakAreas: (r.weakAreas || []).join(', '),
+      solved: String(d.solved ?? ''), mockTests: String(d.mockTests ?? '')
+    });
+    if (x.message) return showError('analysis', x.message);
+    showResult('analysis', `<div class="card"><h3>Strong Areas</h3><p>${escapeHtml((x.strongAreas || []).join(', '))}</p></div><div class="card"><h3>Weak Areas</h3><p>${escapeHtml((x.weakAreas || []).join(', '))}</p></div><div class="card"><h3>Revision Topics</h3><p>${escapeHtml((x.revisionTopics || []).join(', '))}</p></div><div class="card"><h3>Feedback</h3><p>${escapeHtml(x.readinessFeedback || '')}</p></div><div class="card"><h3>Next Topics</h3><p>${escapeHtml((x.recommendedNextTopics || []).join(', '))}</p></div>`);
+  } finally { setBusy(button, false); }
+}
+
+let previousQuestion = '', previousAnswer = '';
+async function nextQuestion() {
+  const button = document.querySelector('button[onclick="nextQuestion()"]');
+  setBusy(button, true, 'Asking AI...');
+  showResult('interview', '<div class="empty">Ollama is preparing your interview question...</div>');
+  try {
+    const r = await api('/api/ai/mock-interview', 'POST', {
+      company: $('miCompany').value, role: $('miRole').value, difficulty: $('miDifficulty').value,
+      interviewType: $('miType').value, previousQuestion, previousAnswer
+    });
+    if (r.message) return showError('interview', r.message);
+    let html = '';
+    if (previousAnswer && r.feedback) html += `<div class="card"><span class="badge">AI Feedback</span><p>${escapeHtml(r.feedback)}</p><p><b>Score:</b> ${escapeHtml(r.score ?? '')}</p></div>`;
+    previousQuestion = r.question || r.nextQuestion || '';
+    previousAnswer = '';
+    html += `<div class="card"><span class="badge">AI Generated</span><h3>${escapeHtml(previousQuestion)}</h3><textarea id="answer" placeholder="Write your answer..."></textarea><button class="btn" id="submitInterview" style="margin-top:10px">Submit Answer</button></div>`;
+    showResult('interview', html);
+    $('submitInterview').addEventListener('click', submitInterviewAnswer);
+  } finally { setBusy(button, false); }
+}
+
+async function submitInterviewAnswer() {
+  previousAnswer = $('answer').value.trim();
+  if (!previousAnswer) { alert('Please enter your answer first.'); return; }
+  await nextQuestion();
+}
+
+function escapeHtml(v) { return String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c])); }
+
+$('evaluateAnswerButton').addEventListener('click', async () => {
+  const button = $('evaluateAnswerButton');
+  setBusy(button, true, 'Evaluating...');
+  showResult('evaluation', '<div class="empty">Evaluating with Ollama...</div>');
+  try {
+    const r = await api('/api/ai/evaluate-answer', 'POST', {
+      question: $('evalQuestion').value, answer: $('evalAnswer').value, expectedAnswer: $('evalExpected').value
+    });
+    if (r.message) return showError('evaluation', r.message);
+    const strengths = Array.isArray(r.strengths) ? r.strengths : [];
+    const weaknesses = Array.isArray(r.weaknesses) ? r.weaknesses : [];
+    const missing = Array.isArray(r.missingConcepts) ? r.missingConcepts : [];
+    const suggestions = Array.isArray(r.suggestions) ? r.suggestions : [];
+    const listHtml = items => items.length
+      ? `<ul>${items.map(x => `<li>${escapeHtml(x)}</li>`).join('')}</ul>`
+      : '<p class="muted">None identified.</p>';
+    showResult('evaluation', `<div class="card"><h3>Score: ${escapeHtml(r.score ?? '')}/10</h3>
+      <p><b>Strengths</b></p>${listHtml(strengths)}
+      <p><b>Weaknesses</b></p>${listHtml(weaknesses)}
+      <p><b>Missing concepts</b></p>${listHtml(missing)}
+      <p><b>Suggestions</b></p>${listHtml(suggestions)}
+      <p><b>Feedback</b></p><p>${escapeHtml(r.feedback || '')}</p></div>`);
+  } finally { setBusy(button, false); }
+});
+
+// Verify the backend/Spring AI connection when the page loads.
+(async function checkAI() {
+  const r = await api('/api/ai/status');
+  if (!r.configured) console.warn('KARPAVAI.AI AI: ChatClient is not configured.');
+  else console.log('KARPAVAI.AI AI: Spring AI + Ollama configured.');
+})();
+</script>
+</body></html>
